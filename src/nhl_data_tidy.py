@@ -34,8 +34,8 @@ def convert_single_play_data(raw_data):
         event_data['team'] = single_play['team']['name']
 
         # get the on-ice coordinates
-        event_data['x_coordinate'] = single_play['coordinates'].get('x', None),
-        event_data['y_coordinate'] = single_play['coordinates'].get('y', None),
+        event_data['x_coordinate'] = single_play['coordinates'].get('x', None)
+        event_data['y_coordinate'] = single_play['coordinates'].get('y', None)
 
         # get the short type
         event_data['shot_type'] = single_play['result'].get('secondaryType',None)
