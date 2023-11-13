@@ -72,7 +72,7 @@ class FeatureEngineering():
         self.df['goal_rate_angle'] = self.df['goal_rate_angle'].replace([math.inf], 1)
 
     
-    def train_test_split(self, seasons_train=["20162017", "20172018", "20182019"], season_test="20192020"):
+    def train_test_split(self, seasons_train=[20162017, 20172018, 20182019], season_test=20192020):
         df_train = self.df[self.df['season'].isin(seasons_train)]
         df_test = self.df[self.df['season'] == season_test]
         return df_train, df_test
