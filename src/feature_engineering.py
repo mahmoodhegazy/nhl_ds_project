@@ -77,9 +77,36 @@ class FeatureEngineering():
         df_test = self.df[self.df['season'] == season_test]
         return df_train, df_test
 
+    def adjustdata(self, df):
+        def train_test_split_season(df, seasons_train=[20162017, 20172018, 20182019], season_test=20192020):
+            df_train = df[df['gameType']=='R'][df['season'].isin(seasons_train)]
+            df_test = df[df['season'] == season_test]
+            return df_train, df_test
+        df = pd.read_csv("data/all_game_data_milesstone_2.csv")
+        train, test = train_test_split(df)
 
-    
+        X_cols = ['game_seconds', 'game_period', 'x_coordinate', 'y_coordinate', 'shot_distance_to_goal', 'shot_angle', 'shot_type',
+        'last_x_coordinate', 'last_y_coordinate', 'last_event', 'time_from_last_event', 'distance_from_last_event', 'rebound', 'speed',
+        'time_since_powerplay_started', 'num_friendly_non_goalie_skaters', 'num_opposing_non_goalie_skaters']
+        y_cols = ['is_goal']
 
+        x_test, y_test = test[X_cols], test[y_cols]
+        test['rebound'] = x_test['rebound'].astype(int)
+        x_test['last_event'] = pd.Categorical(x_test['last_event'])
+        onehot_encoded_df = pd.get_dummies(x_test, columns=['last_event'], prefix='last_event')
+        onehot_encoded_df['shot_type'] = pd.Categorical(onehot_encoded_df['shot_type'])
+        onehot_encoded_df = pd.get_dummies(onehot_encoded_df, columns=['shot_type'], prefix='shot_type')
+        x_test = onehot_encoded_df.fillna(0).astype(int)
+
+        x_train, y_train = train[X_cols], train[y_cols]
+        train['rebound'] = x_train['rebound'].astype(int)
+        x_train['last_event'] = pd.Categorical(x_train['last_event'])
+        onehot_encoded_train = pd.get_dummies(x_train, columns=['last_event'], prefix='last_event')
+        onehot_encoded_train['shot_type'] = pd.Categorical(onehot_encoded_train['shot_type'])
+        onehot_encoded_train = pd.get_dummies(onehot_encoded_train, columns=['shot_type'], prefix='shot_type')
+        x_train = onehot_encoded_df.fillna(0).astype(int)
+
+        return x_train, y_train, x_test, y_test
 
     
 
