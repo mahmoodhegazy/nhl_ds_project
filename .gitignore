@@ -155,6 +155,9 @@ cython_debug/
 # ignore data generated from being pushed
 src/data/
 
+# ignore models generated from being pushed
+src/models/
+
 #ignore DS_store
 .DS_Store
 **/.DS_Store
