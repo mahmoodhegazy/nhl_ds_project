@@ -72,17 +72,13 @@ class FeatureEngineering():
         self.df['goal_rate_angle'] = self.df['goal_rate_angle'].replace([math.inf], 1)
 
     
-    def train_test_split(self, seasons_train=["20162017", "20172018", "20182019"], season_test="20192020"):
+    def train_test_split(self, seasons_train=[20162017, 20172018, 20182019], season_test=20192020):
         df_train = self.df[self.df['season'].isin(seasons_train)]
         df_test = self.df[self.df['season'] == season_test]
         return df_train, df_test
 
     def adjustdata(self, df):
-        def train_test_split_season(df, seasons_train=[20162017, 20172018, 20182019], season_test=20192020):
-            df_train = df[df['gameType']=='R'][df['season'].isin(seasons_train)]
-            df_test = df[df['season'] == season_test]
-            return df_train, df_test
-        train, test = train_test_split(df)
+        train, test = self.train_test_split(df)
 
         X_cols = ['game_seconds', 'game_period', 'x_coordinate', 'y_coordinate', 'shot_distance_to_goal', 'shot_angle', 'shot_type',
         'last_x_coordinate', 'last_y_coordinate', 'last_event', 'time_from_last_event', 'distance_from_last_event', 'rebound', 'speed',
