@@ -82,7 +82,6 @@ class FeatureEngineering():
             df_train = df[df['gameType']=='R'][df['season'].isin(seasons_train)]
             df_test = df[df['season'] == season_test]
             return df_train, df_test
-        df = pd.read_csv("data/all_game_data_milesstone_2.csv")
         train, test = train_test_split(df)
 
         X_cols = ['game_seconds', 'game_period', 'x_coordinate', 'y_coordinate', 'shot_distance_to_goal', 'shot_angle', 'shot_type',
