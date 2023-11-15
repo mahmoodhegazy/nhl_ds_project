@@ -158,6 +158,9 @@ src/data/
 # ignore models generated from being pushed
 src/models/
 
+# For catboost
+src/catboost_info/
+
 #ignore DS_store
 .DS_Store
 **/.DS_Store
