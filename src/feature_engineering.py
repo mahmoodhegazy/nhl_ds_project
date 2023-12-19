@@ -36,7 +36,7 @@ class FeatureEngineering():
         df = df.drop(['last_shot_angle'], axis=1)
         return df
     
-    def tranform(self):
+    def tranform(self, include_change_to_shot_angle=False):
         """
         Helper method for all Feature Engineering 1 transformations in milestone 2
         """
@@ -61,7 +61,8 @@ class FeatureEngineering():
 
         self.df['is_goal'] = self.df['is_goal'].fillna(0).astype(int)
         self.df['is_emptyNet'] = self.df['is_emptyNet'].fillna(0).astype(int)
-        self.df = self.add_change_to_shot_angle(self.df)
+        if include_change_to_shot_angle:
+            self.df = self.add_change_to_shot_angle(self.df)
         
 
         goal_rate = self.df['is_goal'].sum() / len(self.df)
