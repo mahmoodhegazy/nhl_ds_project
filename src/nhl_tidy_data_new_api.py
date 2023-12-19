@@ -46,9 +46,9 @@ def convert_single_play_data(raw_data):
           event_data['is_goal'] = True
           event_data['scoring_team'] = "home" if single_play['details'].get("eventOwnerTeamId", None) == home_team_id else "away"
           # Get if goal was empty, 
-          # if home team scoring we check if away goalie was on ice using 4th digit in situation code (if digit is 1 then not an empty net)
-          # if away team scoring we check if home goalie was on ice using 1st digit in situation code (if digit is 1 then not an empty net)
-          event_data['is_emptyNet'] = not single_play['situationCode'][3] if event_data['scoring_team'] == "home" else not single_play['situationCode'][0] 
+          # if home team scoring we check if away goalie was on ice using 1st digit in situation code (if digit is 1 then not an empty net)
+          # if away team scoring we check if home goalie was on ice using 4th digit in situation code (if digit is 1 then not an empty net)
+          event_data['is_emptyNet'] = not int(single_play['situationCode'][0]) if event_data['scoring_team'] == "home" else not int(single_play['situationCode'][3]) 
         else:
           event_data['is_goal'] = False
 
