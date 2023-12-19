@@ -8,10 +8,14 @@ from tqdm import tqdm
 
 class DataAcquisition():
 
-    def __init__(self):
+    def __init__(self, seasons, game_types, files_path="data"):
         # specifying endpoints as vars for future proofing
-        self.game_endpoint = "https://statsapi.web.nhl.com/api/v1/game"
-        self.schedule_endpoint = "https://statsapi.web.nhl.com/api/v1/schedule"
+        self.game_endpoint = "https://api-web.nhle.com/v1/gamecenter"
+        self.schedule_endpoint = "https://api-web.nhle.com/v1/club-schedule-season"
+        self.teams_endpoint = "https://api.nhle.com/stats/rest/en/team"
+        self.seasons = seasons
+        self.game_types = game_types
+        self.files_path = files_path
 
     def _get_game_request_url(self, game_id:str) -> str:
         """
@@ -20,29 +24,27 @@ class DataAcquisition():
 
         Return: Rest endpoint for that game_id
         """
-        return f'{self.game_endpoint}/{game_id}/feed/live/'
+        return f'{self.game_endpoint}/{game_id}/play-by-play'
     
-    def _get_season_games_request_url(self, season:str) -> str:
+    def _get_season_games_request_url(self, season:str, team:str) -> str:
         """
         Args: 
             season: str
 
         Return: Rest endpoint for that season
         """
-        return f'{self.schedule_endpoint}?season={season}'
+        return f'{self.schedule_endpoint}/{team}/{season}'
     
-    def _get_associated_game_ids(self, game_type: str, season: str) -> list:
+    def _get_associated_teams(self) -> list:
         """
         Args: 
-            game_type: specified game type
-            season: specified season
         Returns:
-        list of game IDs from the NHL API for a specified game_type/season
-        
+        list of team IDs from the NHL API, needed to get all game_ids
+
         """
 
         # Make a GET request to the NHL API
-        response = rest.get(self._get_season_games_request_url(season))
+        response = rest.get(self.teams_endpoint)
 
         # Check if the request was successful
         # If not we will handle by returning empty list
@@ -52,18 +54,48 @@ class DataAcquisition():
         # Parse the JSON response
         data = response.json()
 
-        game_ids = []
+        teams = []
+        # Iterate through all teams and get code
+        for team in data.get('data', []):
+            teams.append(team.get('triCode', []))
+
+        return teams
+    
+
+
+
+    def get_associated_game_ids(self, seasons: list, game_types: list) -> list:
+        """
+        Args: 
+            game_types: specified game types
+            seasons: specified seasons
+        Returns:
+        list of game IDs from the NHL API for a specified game_type/season
+        
+        """
+
         # Iterate through all games and if game
-        # game found to be of specified game type, append to game_ids
-        for date in data.get('dates', []):
-            for game in date.get('games', []):
-                curr_game_id = game.get('gamePk', 0)
-                curr_game_type = game.get('gameType', '')
-                if curr_game_type == game_type:
-                    game_ids.append(str(curr_game_id))
+        # game found to be of specified game types, append to game_ids
+        game_ids = []
+        self.teams = self._get_associated_teams()
+
+        for team in self.teams:
+            for season in  seasons:
+                # Make a GET request to the NHL API
+                response = rest.get(self._get_season_games_request_url(season=season, team=team))
+                if response.status_code != 200: #if response was not successful skip this combo
+                    continue
+                data = response.json() # Parse the JSON response
+                season_games = data.get('games',[]) # Get season games
+                for game in season_games:
+                    curr_game_id = game.get("id", 0)
+                    curr_game_type = game.get("gameType", '')
+                    if str(curr_game_type) in game_types:
+                        game_ids.append(str(curr_game_id))
 
         return game_ids
 
+    
         
     def get_game_data(self, game_id:str) -> dict:
         """
@@ -99,25 +131,23 @@ class DataAcquisition():
                 json.dump(game_data, out_path, indent=4)
        
 
-    def _get_filepath_for_game(self, parent_dir:str, season:str, game_type:str, game_id:str):
+    def _get_filepath_for_game(self, parent_dir:str, game_id:str):
         '''
         Args:
-            parent_dir: directory at which data will be stored
-            season: str of format YYYYYYYY for ex. 20172018 (as required by api)
-            game_type: either R for regular or P for playoffs
+            parent_dir: directory at which data will be stored speicified by user
             game_id: str 
         Returns:
-            The filepath given the season, game_type and game_id
+            The filepath given game_id
         '''
         # Get directory path without the filename
-        dir_path = os.path.join(parent_dir, season, game_type.upper())
+        dir_path = os.path.join(parent_dir)
         # Create the directory if it doesn't exist
         os.makedirs(dir_path, exist_ok=True)
         # Return the complete filepath with the '.json' extension
         return os.path.join(dir_path, f'{game_id}.json')
 
     
-    def download_play_by_play_data_for_season(self, season: str, game_type:str):
+    def download_play_by_play_data_for_specific_season_gametype(self, season: str, game_type:str):
         """
         Args:
             season: str of format YYYYYYYY for ex. 20172018 (as required by api)
@@ -126,26 +156,26 @@ class DataAcquisition():
             downloads all play by play data for specific season (either Playoffs or Regular)
         """
         # assertions to make sure call was correct
-        assert game_type in ["R","P"]
         assert len(season) == 8
+        assert game_type in ["2","3"]
 
-        game_ids = self._get_associated_game_ids(game_type=game_type, season=season)
-        for game_id in game_ids:
+        game_ids = self.get_associated_game_ids(game_types=[game_type], seasons=[season])
+        for game_id in tqdm(game_ids, desc="Processing"):
             game_data = self.get_game_data(game_id=game_id)
-            self._save_game_data(game_data=game_data, filepath=self._get_filepath_for_game(parent_dir="data",season=season,game_type=game_type,game_id=game_id))
+            self._save_game_data(game_data=game_data, filepath=self._get_filepath_for_game(parent_dir=self.files_path, game_id=game_id))
 
-    def download_all_play_by_play_data(self, seasons:list, game_types:list):
+
+    def download_all_play_by_play_data(self):
         """
         Args:
-            seasons: list of season str of format YYYYYYYY for ex. 20172018 (as required by api)
-            game_types: list if game_types (either R for regular or P for playoffs)
         Return:
-            downloads all play by play data for specified season and gametype combos
+            downloads all play by play data for specified seasons and gametypes
         """
-        # To loop through both lists effeciently we can use itertools product
-        season_gt_combs = product(seasons, game_types)
-        for season, game_type in tqdm(season_gt_combs, desc="Processing"):
-            self.download_play_by_play_data_for_season(season=season,game_type=game_type)
+
+        game_ids = self.get_associated_game_ids(game_types=self.game_types, seasons=self.seasons)
+        for game_id in tqdm(game_ids, desc="Processing"):
+            game_data = self.get_game_data(game_id=game_id)
+            self._save_game_data(game_data=game_data, filepath=self._get_filepath_for_game(parent_dir=self.files_path, game_id=game_id))
 
 
 
