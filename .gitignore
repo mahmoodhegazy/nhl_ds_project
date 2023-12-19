@@ -154,6 +154,7 @@ cython_debug/
 
 # ignore data generated from being pushed
 src/data/
+src/new_data/
 
 # ignore models generated from being pushed
 src/models/
