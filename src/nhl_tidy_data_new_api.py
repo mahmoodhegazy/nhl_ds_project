@@ -41,6 +41,7 @@ def convert_single_play_data(raw_data):
 
         event_data['shooter_id'] = single_play['details'].get('scoringPlayerId', None)
         event_data['goalie_id'] = single_play['details'].get('goalieInNetId', None)
+        event_data['event_team'] = "home" if single_play['details'].get("eventOwnerTeamId", None) == home_team_id else "away"
 
         if event_type == 'goal':
           event_data['is_goal'] = True
