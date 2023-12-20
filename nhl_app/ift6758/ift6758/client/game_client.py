@@ -13,6 +13,16 @@ class GameClient:
         self.processed_events = {}  # Dictionary to keep track of processed events by game_id
 
     def fetch_live_game_data(self, game_id):
+        """
+                Fetches live game data for a given game_id from the NHL API. Returns
+                the game data as a JSON object if successful, or None if the request fails.
+
+                Args:
+                    game_id (str): The game ID for which live data is to be fetched.
+
+                Returns:
+                    dict or None: The live game data as a JSON object, or None if the request fails.
+        """
         url = f"https://api-web.nhle.com/v1/gamecenter/{game_id}/play-by-play"
         response = requests.get(url)
         if response.status_code == 200:
@@ -20,7 +30,18 @@ class GameClient:
         else:
             return None
 
-    def process_new_events(self, game_id, serving_client):
+    def ping_game(self, game_id):
+        """
+                Processes new events for a given game_id. It fetches live game data,
+                extracts new events, processes them to extract features, gets predictions
+                using the serving client, and updates the processed events tracker.
+
+                Args:
+                    game_id (str): The game ID for which new events are to be processed.
+                Returns:
+                    DataFrame or None: A DataFrame containing predictions for new events,
+                    or None if there are no new events.
+        """
         new_events = []
         game_data = self.fetch_live_game_data(game_id)
 
@@ -44,6 +65,17 @@ class GameClient:
 
 
     def extract_features(self, events):
+        """
+                Extracts features from raw event data. This function converts the raw
+                event data into a format suitable for feature engineering and applies
+                feature engineering transformations.
+
+                Args:
+                    events (dict): The raw event data.
+
+                Returns:
+                    DataFrame: A DataFrame containing the extracted features.
+        """
         # feature extraction from events
         df = convert_single_play_data(events)
 
@@ -53,6 +85,14 @@ class GameClient:
         return transformed_df
 
     def update_processed_events(self, game_id, events):
+        """
+                Updates the internal tracker with processed event IDs for a specific game_id.
+                This ensures that these events are not reprocessed in subsequent calls.
+
+                Args:
+                    game_id (str): The game ID for which events are to be updated.
+                    events (list): A list of event dictionaries that have been processed.
+        """
         if game_id not in self.processed_events:
             self.processed_events[game_id] = set()
         for event in events:
