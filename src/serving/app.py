@@ -34,8 +34,7 @@ dictConfig({
 })
 dataset = '../data/all_new_game_data_with_features.csv'
 app = Flask(__name__)
-# api = API(os.environ.get('COMET_API_KEY'))
-api = API('h85xbEnyF7lyFkSRYhBshWV8E')
+api = API(os.environ.get('COMET_API_KEY'))
 path = f'../data/{dataset}'
 model_data = {
     "log" : {
