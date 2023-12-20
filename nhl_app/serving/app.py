@@ -9,21 +9,44 @@ gunicorn can be installed via:
 
 """
 import os
-from pathlib import Path
 import logging
-from flask import Flask, jsonify, request, abort
-import sklearn
+import pickle
 import pandas as pd
-import joblib
+from flask import Flask, request, jsonify, abort
+from logging.config import dictConfig
+from comet_ml.api import API
 
 
-import ift6758
-
-
-LOG_FILE = os.environ.get("FLASK_LOG", "flask.log")
-
-
+dictConfig({
+    "version": 1,
+    "formatters": {
+        "default": {
+            "format": "[%(asctime)s] %(levelname)s in %(module)s: %(message)s"
+        }
+    },
+    "handlers": {
+        "file": {
+            "class": "logging.FileHandler",
+            "filename": "flask.log",
+            "formatter": "default"
+        },
+        "console": {
+            "class": "logging.StreamHandler",
+                "stream": "ext://sys.stdout",
+                "formatter": "default",
+            },
+    },
+    "root": {
+        "level": "DEBUG",
+        "handlers": ["file", "console"]
+    }
+    
+})
+# dataset = '../data/all_new_game_data_with_features.csv'
 app = Flask(__name__)
+api = API(os.environ.get('COMET_API_KEY'))
+# path = f'../data/{dataset}'
+model_data = None
 
 
 @app.before_first_request
@@ -32,33 +55,68 @@ def before_first_request():
     Hook to handle any initialization before the first request (e.g. load model,
     setup logging handler, etc.)
     """
-    # TODO: setup basic logging configuration
-    logging.basicConfig(filename=LOG_FILE, level=logging.INFO)
+    # setup basic logging configuration
+    # logging.basicConfig(filename=LOG_FILE, level=logging.INFO)
 
-    # TODO: any other initialization before the first request (e.g. load default model)
+    # any other initialization before the first request (e.g. load default model)
+    global model_data
+    model_data = {
+        "log" : {
+            "file_name":"both.sav",
+            "registry_name" : "distance-and-angle-model-1",
+            "cols" : [['shot_distance', 'shot_angle']]
+        },
+        "xgboost" : {
+            "file_name":"XGBOOST-baseline.sav",
+            "registry_name" : "xgboost-baseline",
+            "cols": ['shot_distance_to_goal', 'shot_angle']
+        }
+    }
     pass
 
 
-@app.route("/logs", methods=["GET"])
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    """
+    Handles POST requests made to http://IP_ADDRESS:PORT/predict
+
+    Returns predictions
+    """
+
+    body = request.get_json()
+    data = {
+        'shot_distance_to_goal': [body['shot_distance_to_goal']],
+        'shot_angle': [body['shot_angle']]
+    }
+    df = pd.DataFrame(data)
+    app.logger.info(body)
+    if model_name in model_data.keys():
+        response = model.predict_proba(df.values)[0][1]
+        app.logger.info(response)
+        return jsonify(str(response))
+    else:
+        app.logger.info("the model is not valid")
+        rep = {"message":"the model is not valid"}
+        return jsonify(rep)
+
+
+@app.route('/logs', methods=["GET"])
 def logs():
     """Reads data from the log file and returns them as the response"""
+    file = open('flask.log', 'r')
+    response = file.read().splitlines()
+    file.close()
     
-    # TODO: read the log file specified and return the data
-    raise NotImplementedError("TODO: implement this endpoint")
-
-    response = None
-    return jsonify(response)  # response must be json serializable!
+    return jsonify(response) 
 
 
-@app.route("/download_registry_model", methods=["POST"])
+@app.route('/download_registry_model', methods=['POST'])
 def download_registry_model():
     """
     Handles POST requests made to http://IP_ADDRESS:PORT/download_registry_model
-
     The comet API key should be retrieved from the ${COMET_API_KEY} environment variable.
-
     Recommend (but not required) json with the schema:
-
         {
             workspace: (required),
             model: (required),
@@ -67,45 +125,45 @@ def download_registry_model():
         }
     
     """
-    # Get POST json data
-    json = request.get_json()
-    app.logger.info(json)
+    global model
+    global model_name
+    model = None
+    req_body = request.get_json()
+    model_name = req_body['model']
+    app.logger.info(req_body)
+    if model_name in model_data.keys():
+        if os.path.exists(f'model/{model_data[model_name]["file_name"]}'):
+            model = pickle.load(open(f'model/{model_data[model_name]["file_name"]}', 'rb'))
+            app.logger.info("Model has been changed!")
+        else:
+            try:
+                 api.download_registry_model(workspace="mahmoodhegazy", registry_name=model_data[model_name]["registry_name"], output_path="./model")
+                 model = pickle.load(open(f'model/{model_data[model_name]["file_name"]}', 'rb'))
+                 app.logger.info("Model has been downloaded!")
+            except:
+                 app.logger.info("the model is not available")
+        
+    else:
+        msg = {"message":"model is not valid"}
+        app.logger.info(msg["message"])
+        return jsonify(msg)
 
-    # TODO: check to see if the model you are querying for is already downloaded
-
-    # TODO: if yes, load that model and write to the log about the model change.  
-    # eg: app.logger.info(<LOG STRING>)
-    
-    # TODO: if no, try downloading the model: if it succeeds, load that model and write to the log
-    # about the model change. If it fails, write to the log about the failure and keep the 
-    # currently loaded model
-
-    # Tip: you can implement a "CometMLClient" similar to your App client to abstract all of this
-    # logic and querying of the CometML servers away to keep it clean here
-
-    raise NotImplementedError("TODO: implement this endpoint")
-
-    response = None
-
+    response = 'SUCCESS: '+ model_name + ' is loaded!'
     app.logger.info(response)
-    return jsonify(response)  # response must be json serializable!
+    return jsonify(response) 
 
 
-@app.route("/predict", methods=["POST"])
-def predict():
-    """
-    Handles POST requests made to http://IP_ADDRESS:PORT/predict
+def clean_log_file():
+    open('flask.log', 'w').close()
 
-    Returns predictions
-    """
-    # Get POST json data
-    json = request.get_json()
-    app.logger.info(json)
+# Set the port to 8080
+port = 8080
 
-    # TODO:
-    raise NotImplementedError("TODO: implement this enpdoint")
-    
-    response = None
+# clean the log file
+clean_log_file()
 
-    app.logger.info(response)
-    return jsonify(response)  # response must be json serializable!
+# Run the Flask development server on port 8080
+app.run(host='0.0.0.0', port=port, debug=True)
+
+# if __name__ == '__main__':
+#     app.run(host='0.0.0.0', port=8080)

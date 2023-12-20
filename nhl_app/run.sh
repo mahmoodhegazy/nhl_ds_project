@@ -1,3 +1,2 @@
 #!/bin/bash
-
-echo "TODO: fill in the docker run command"
+docker run -p 8080:8080 model-serving
