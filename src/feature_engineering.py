@@ -7,16 +7,15 @@ import seaborn as sns
 
 class FeatureEngineering():
 
-    def __init__(self, path_to_tidy_data='data/all_game_data.csv'):
+    def __init__(self, df):
         """
         This class is the main class for feature Engineering, it is where the feature eng for milestone 2 lies
 
         Args:
-        path_to_tiny_data: path to tidy data devoloped in milestone 1
+        df: tidy data to generate features for
         """
         
-        self.df = pd.read_csv(path_to_tidy_data)
-    
+        self.df = df
 
     def add_change_to_shot_angle(self, df):
         """
