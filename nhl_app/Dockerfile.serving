@@ -14,7 +14,6 @@ FROM python:3.7
 # Create and cd into /code as your working directory
 WORKDIR /code
 
-
 # The main docker commands you will find useful:
 # 
 # Add a file or directory
@@ -45,13 +44,19 @@ WORKDIR /code
 
 
 # TODO: add code, optionally a default model if you want 
+ADD /ift6758/requirements.txt .
+ADD /serving/app.py .
 
 
 # TODO: install libs
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
 
 
 # TODO: expose ports (or do this in docker-compose)
+EXPOSE 8080
 
 
 # TODO: specify default command - this is not required because you can always specify the command
 # either with the docker run command or in the docker-compose file
+CMD ["gunicorn"  , "--bind", "0.0.0.0:8080", "app:app"]
