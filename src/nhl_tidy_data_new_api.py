@@ -32,6 +32,7 @@ def convert_single_play_data(raw_data):
       if event_code in [505, 506, 507, 508]: #goals and shots codes according to https://gitlab.com/dword4/nhlapi/-/issues/110
         # get the game time/period information
         event_data['game_period'] = single_play['period']
+        event_data['time_remaining_in_period'] = single_play['timeRemaining']
         # get the on-ice coordinates
         event_data['x_coordinate'] = single_play['details'].get('xCoord', None)
         event_data['y_coordinate'] = single_play['details'].get('yCoord', None)
