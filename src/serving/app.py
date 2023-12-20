@@ -6,6 +6,7 @@ from flask import Flask, request, jsonify, abort
 from logging.config import dictConfig
 from comet_ml.api import API
 
+
 dictConfig({
     "version": 1,
     "formatters": {
@@ -31,7 +32,7 @@ dictConfig({
     }
     
 })
-dataset = None
+dataset = '../data/all_new_game_data_with_features.csv'
 app = Flask(__name__)
 # api = API(os.environ.get('COMET_API_KEY'))
 api = API('h85xbEnyF7lyFkSRYhBshWV8E')
@@ -40,12 +41,12 @@ model_data = {
     "log" : {
         "file_name":"both.sav",
         "registry_name" : "distance-and-angle-model-1",
-        "cols" : [['shot_distance']]
+        "cols" : [['shot_distance', 'shot_angle']]
     },
     "xgboost" : {
         "file_name":"XGBOOST-baseline.sav",
         "registry_name" : "xgboost-baseline",
-        "cols": [['shot_distance', 'shot_angle']]
+        "cols": ['shot_distance_to_goal', 'shot_angle']
     }
 }
 
@@ -56,12 +57,16 @@ model_data = {
 def predict():
 
     body = request.get_json()
+    data = {
+        'shot_distance_to_goal': [body['shot_distance_to_goal']],
+        'shot_angle': [body['shot_angle']]
+    }
+    df = pd.DataFrame(data)
     app.logger.info(body)
     if model_name in model_data.keys():
-        data = pd.read_csv(path)[model_data[model_name]['cols']]
-        response = pd.Series(model.predict_proba(data))
+        response = model.predict_proba(df.values)[0][1]
         app.logger.info(response)
-        return jsonify(response)
+        return jsonify(str(response))
     else:
         app.logger.info("the model is not valid")
         rep = {"message":"the model is not valid"}
@@ -86,15 +91,15 @@ def download_registry_model():
     app.logger.info(req_body)
     if model_name in model_data.keys():
         if os.path.exists(f'model/{model_data[model_name]["file_name"]}'):
-            model = pickle.load(open(model_data[model_name]["file_name"], 'rb'))
+            model = pickle.load(open(f'model/{model_data[model_name]["file_name"]}', 'rb'))
             app.logger.info("Model has been changed!")
         else:
             try:
                  api.download_registry_model(workspace="mahmoodhegazy", registry_name=model_data[model_name]["registry_name"], output_path="./model")
-                 model = pickle.load(open(model_data[model_name]["file_name"], 'rb'))
+                 model = pickle.load(open(f'model/{model_data[model_name]["file_name"]}', 'rb'))
                  app.logger.info("Model has been downloaded!")
             except:
-                 app.loger.info("the model is not available")
+                 app.logger.info("the model is not available")
         
     else:
         msg = {"message":"model is not valid"}
