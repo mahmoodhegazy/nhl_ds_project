@@ -47,10 +47,10 @@ app = Flask(__name__)
 api = API(os.environ.get('COMET_API_KEY'))
 # path = f'../data/{dataset}'
 model_data = None
+model = None
 
 
-@app.before_first_request
-def before_first_request():
+def create_all():
     """
     Hook to handle any initialization before the first request (e.g. load model,
     setup logging handler, etc.)
@@ -60,6 +60,7 @@ def before_first_request():
 
     # any other initialization before the first request (e.g. load default model)
     global model_data
+    global model
     model_data = {
         "log" : {
             "file_name":"both.sav",
@@ -72,9 +73,20 @@ def before_first_request():
             "cols": ['shot_distance_to_goal', 'shot_angle']
         }
     }
-    pass
+    app.logger.info("Before first request...")
+    if os.path.exists(f'model/both.sav'):
+            model = pickle.load(open(f'model/both.sav', 'rb'))
+            app.logger.info("Model has been changed!")
+    else:
+        try:
+            api.download_registry_model(workspace="mahmoodhegazy", registry_name='distance-and-angle-model-1', output_path="./model")
+            model = pickle.load(open(f'model/both.sav', 'rb'))
+            app.logger.info("Model has been downloaded!")
+        except:
+            app.logger.info("the model is not available")
 
-
+with app.app_context():
+    create_all()
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -85,21 +97,18 @@ def predict():
     """
 
     body = request.get_json()
-    data = {
-        'shot_distance_to_goal': [body['shot_distance_to_goal']],
-        'shot_angle': [body['shot_angle']]
-    }
+    data = body[:]
+    # data = {
+    #     'shot_distance_to_goal': [body['shot_distance_to_goal']],
+    #     'shot_angle': [body['shot_angle']]
+    # }
     df = pd.DataFrame(data)
     app.logger.info(body)
-    if model_name in model_data.keys():
-        response = model.predict_proba(df.values)[0][1]
-        app.logger.info(response)
-        return jsonify(str(response))
-    else:
-        app.logger.info("the model is not valid")
-        rep = {"message":"the model is not valid"}
-        return jsonify(rep)
-
+    response = model.predict_proba(df.values)
+    probs = [row[1] for row in response]
+    app.logger.info(probs)
+    return jsonify(str(probs))
+    
 
 @app.route('/logs', methods=["GET"])
 def logs():
