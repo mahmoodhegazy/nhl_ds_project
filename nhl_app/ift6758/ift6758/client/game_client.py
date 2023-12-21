@@ -2,9 +2,9 @@ import requests
 import pandas as pd
 import logging
 
-from nhl_tidy_data_new_api import convert_single_play_data
-from feature_engineering import FeatureEngineering
-from serving_client import ServingClient
+from .nhl_tidy_data_new_api import convert_single_play_data
+from .feature_engineering import FeatureEngineering
+from .serving_client import ServingClient
 logger = logging.getLogger(__name__)
 serving_client = ServingClient(ip="127.0.0.1", port=8080)
 
@@ -58,6 +58,8 @@ class GameClient:
         # Extract current play details
         period = game_data.get('period', 0)
         timeLeft = game_data['clock']['timeRemaining']
+        home_name = game_data['homeTeam']['name']['default']
+        away_name = game_data['awayTeam']['name']['default']
         home_score = game_data['homeTeam']['score']
         away_score = game_data['awayTeam']['score']
 
@@ -99,6 +101,8 @@ class GameClient:
             "live": live,
             "period": period,
             "timeLeft": timeLeft,
+            "home_name": home_name,
+            "away_name": away_name,
             "home_score": home_score,
             "away_score": away_score,
             "home_xG": xg_home,
