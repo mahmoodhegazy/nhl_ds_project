@@ -108,7 +108,7 @@ def predict():
     response = model.predict_proba(df)
     probs = [row[1] for row in response]
     app.logger.info(probs)
-    return jsonify(str(probs))
+    return jsonify(probs)
     
 
 @app.route('/logs', methods=["GET"])

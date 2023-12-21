@@ -3,14 +3,14 @@ import pandas as pd
 import logging
 
 from nhl_tidy_data_new_api import convert_single_play_data
-from src.feature_engineering import FeatureEngineering
+from feature_engineering import FeatureEngineering
 from serving_client import ServingClient
 logger = logging.getLogger(__name__)
 serving_client = ServingClient(ip="127.0.0.1", port=8080)
 
 class GameClient:
-    def __init__(self):
-        self.processed_events = {}  # Dictionary to keep track of processed events by game_id
+    def __init__(self, game_id = 2022030411, xg_home = 0, xg_away = 0, last_idx = 0):
+        self.game_tracker = {game_id:(xg_home, xg_away, last_idx)} # Dictionary to keep track of game_id progress
 
     def fetch_live_game_data(self, game_id):
         """
@@ -30,7 +30,7 @@ class GameClient:
         else:
             return None
 
-    def ping_game(self, game_id, serving_client):
+    def ping_game(self, game_id):
         """
                 Processes new events for a given game_id. It fetches live game data,
                 extracts new events, processes them to extract features, gets predictions
@@ -44,6 +44,13 @@ class GameClient:
         """
         new_events = []
         game_data = self.fetch_live_game_data(game_id)
+        xg_home, xg_away, last_idx = 0,0,0
+
+        # Check if game_id stored, if, yes get where we left off, if not add it to dict
+        if game_id in self.game_tracker:
+            xg_home, xg_away, last_idx = self.game_tracker[game_id]
+        else:
+            self.game_tracker[game_id] = 0,0,0
 
         # Check if the game is live or has ended
         live = game_data.get('gameState') != 'OFF'
@@ -54,28 +61,48 @@ class GameClient:
         home_score = game_data['homeTeam']['score']
         away_score = game_data['awayTeam']['score']
 
-        for play in game_data['plays']:
-            event_id = play.get('eventId')
-            if event_id and event_id not in self.processed_events.get(game_id, set()):
-                new_events.append(play)
+        # Only predict events that have not been considered yet
+        if len(game_data['plays']) == last_idx:
+            new_events = None
+        else:
+            new_events.extend(game_data['plays'][last_idx:])
+
+        # Init predicitons 
+        df_with_predictions = pd.DataFrame()
 
         if new_events:
-            # Create a temporary structure with only new events
+            # Create a temporary df with only new events
             temp_game_data = game_data.copy()
             temp_game_data['plays'] = new_events
-            # print(temp_game_data)
-            df = self.extract_features(temp_game_data)  # passing the entire structure
-
-            predictions = serving_client.predict(df)
-            self.update_processed_events(game_id, new_events)
+            df = self.extract_features(temp_game_data)
+            # Seperate home events from away events
+            df_home = df[df.event_team == "home"][["shot_distance_to_goal", "shot_angle"]]
+            df_away = df[df.event_team == "away"][["shot_distance_to_goal", "shot_angle"]]
+            # Get preds for home and away
+            preds_home = serving_client.predict(df_home)
+            preds_away = serving_client.predict(df_away)
+            df_home["team"] = "home"
+            df_home["xG"] = preds_home["xG"].tolist()
+            df_away["team"] = "away"
+            df_away["xG"] = preds_away["xG"].tolist()
+            # Concat to return data to show 
+            df_with_predictions = pd.concat([df_home, df_away])
+            # Calculate new xg_home and xg_away
+            xg_home += preds_home["xG"].sum()
+            xg_away += preds_away["xG"].sum()
+        
+        last_idx = len(game_data['plays']) #update last_idx
+        self.game_tracker[game_id] = xg_home, xg_away, last_idx
 
         return {
-            "predictions": predictions,
+            "df": df_with_predictions,
             "live": live,
             "period": period,
             "timeLeft": timeLeft,
             "home_score": home_score,
-            "away_score": away_score
+            "away_score": away_score,
+            "home_xG": xg_home,
+            "away_xG": xg_away,
         }
 
 
@@ -116,11 +143,3 @@ class GameClient:
             event_id = event.get('eventId')  # Update to use the correct key for event ID
             if event_id:
                 self.processed_events[game_id].add(event_id)
-
-
-
-#testing
-game_client = GameClient()
-test_game_id = '2022030411'  # Replace with your test game ID
-output = game_client.ping_game(test_game_id, serving_client)
-print(output)
