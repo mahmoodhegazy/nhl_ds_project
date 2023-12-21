@@ -6,7 +6,7 @@ from .nhl_tidy_data_new_api import convert_single_play_data
 from .feature_engineering import FeatureEngineering
 from .serving_client import ServingClient
 logger = logging.getLogger(__name__)
-serving_client = ServingClient(ip="127.0.0.1", port=8080)
+serving_client = ServingClient(ip="serving", port=8080)
 
 class GameClient:
     def __init__(self, game_id = 2022030411, xg_home = 0, xg_away = 0, last_idx = 0):
