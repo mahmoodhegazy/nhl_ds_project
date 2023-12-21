@@ -35,7 +35,7 @@ class ServingClient:
             return pd.DataFrame(response.json(), columns=['xG'])
         else:
             logger.error(f"Failed to get predictions: {response.text}")
-            return pd.DataFrame()
+            return pd.DataFrame(columns=["xG"])
         
 
     def logs(self) -> dict:
