@@ -10,6 +10,8 @@ if 'temp' not in st.session_state:
     st.session_state.temp = 0
 if 'last_game_id' not in st.session_state:
     st.session_state.last_game_id = None
+if 'last_selected_model' not in st.session_state:
+    st.session_state.last_selected_model = None
 
 serving_client = serving_client.ServingClient(ip='127.0.0.1', port=8080)
 game_client = game_client.GameClient()
@@ -26,6 +28,11 @@ with st.sidebar:
         # Download model from CometML
         serving_client.download_registry_model(workspace, model, version)
         st.success('Model Downloaded')
+        # Monitor changes in the selected model
+        if model != st.session_state.last_selected_model:
+            st.session_state.temp = 0
+            st.session_state.last_game_id = None
+            st.session_state.last_selected_model = model
 
 with st.container():
     game_id = st.text_input("Enter Game ID (e.g., 2021020329):")
@@ -74,5 +81,6 @@ with st.container():
 
       else:
         st.warning("Please enter a Game ID before pinging.")
+
 
 # Display the dataframe from session state
