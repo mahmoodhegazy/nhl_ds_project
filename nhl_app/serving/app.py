@@ -12,6 +12,7 @@ import os
 import logging
 import pickle
 import pandas as pd
+import collections
 from flask import Flask, request, jsonify, abort
 from logging.config import dictConfig
 from comet_ml.api import API
@@ -97,14 +98,14 @@ def predict():
     """
 
     body = request.get_json()
-    data = body[:]
-    # data = {
-    #     'shot_distance_to_goal': [body['shot_distance_to_goal']],
-    #     'shot_angle': [body['shot_angle']]
-    # }
+    data_shot_dist = body['shot_distance_to_goal']
+    data_shot_angle = body['shot_angle']
+
+    data = [[data_shot_dist[key], data_shot_angle[key]] for key in data_shot_dist.keys()]
+    
     df = pd.DataFrame(data)
     app.logger.info(body)
-    response = model.predict_proba(df.values)
+    response = model.predict_proba(df)
     probs = [row[1] for row in response]
     app.logger.info(probs)
     return jsonify(str(probs))
