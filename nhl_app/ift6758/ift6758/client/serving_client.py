@@ -3,7 +3,6 @@ import requests
 import pandas as pd
 import logging
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -23,32 +22,60 @@ class ServingClient:
         Formats the inputs into an appropriate payload for a POST request, and queries the
         prediction service. Retrieves the response from the server, and processes it back into a
         dataframe that corresponds index-wise to the input dataframe.
-        
+
         Args:
             X (Dataframe): Input dataframe to submit to the prediction service.
         """
-
-        raise NotImplementedError("TODO: implement this function")
+        url = f"{self.base_url}/predict"
+        for index, row in X.iterrows():
+            data = {
+                'model': 'xgboost',
+                'shot_distance_to_goal': row['shot_distance_to_goal'],
+                'shot_angle': row['shot_angle']
+            }
+            response = requests.post(url, json=data)
+            if response.status_code == 200:
+                return pd.read_json(response.json(), orient='split')
+            else:
+                logger.error(f"Failed to get predictions: {response.text}")
+                return pd.DataFrame()
 
     def logs(self) -> dict:
         """Get server logs"""
-
-        raise NotImplementedError("TODO: implement this function")
+        url = f"{self.base_url}/logs"
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            logger.error(f"Failed to get logs: {response.text}")
+            return {}
 
     def download_registry_model(self, workspace: str, model: str, version: str) -> dict:
         """
         Triggers a "model swap" in the service; the workspace, model, and model version are
         specified and the service looks for this model in the model registry and tries to
-        download it. 
+        download it.
 
         See more here:
 
             https://www.comet.ml/docs/python-sdk/API/#apidownload_registry_model
-        
+
         Args:
             workspace (str): The Comet ML workspace
             model (str): The model in the Comet ML registry to download
             version (str): The model version to download
         """
+        url = f"{self.base_url}/download_registry_model"
+        payload = {"workspace": workspace, "model": model, "version": version}
+        response = requests.post(url, json=payload)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            logger.error(f"Failed to download model: {response.text}")
+            return {}
 
-        raise NotImplementedError("TODO: implement this function")
+
+# client = ServingClient(ip="127.0.0.1", port=8080)
+# test_data = pd.DataFrame({'shot_distance_to_goal': [20], 'shot_angle': [45]})
+# prediction = client.logs()
+# print(prediction)
