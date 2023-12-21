@@ -158,6 +158,7 @@ src/new_data/
 
 # ignore models generated from being pushed
 src/models/
+nhl_app/serving/model/
 
 # For catboost
 src/catboost_info/
