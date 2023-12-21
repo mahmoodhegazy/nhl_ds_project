@@ -20,7 +20,7 @@ st.subheader('Current Live Games')
 
 with st.sidebar:
     workspace = st.selectbox("Workspace", ["mahmoodhegazy"])
-    model = st.selectbox("Model", ["log", "xgboost"])
+    model = st.selectbox("Model", ["log", "logdist"])
     version = st.selectbox("Version", ["1.0.0"])
     if st.button('Get Model'):
         # Download model from CometML
