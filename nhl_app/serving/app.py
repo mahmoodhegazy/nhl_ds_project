@@ -156,14 +156,14 @@ def download_registry_model():
 def clean_log_file():
     open('flask.log', 'w').close()
 
-# Set the port to 8080
-port = 8080
+# # Set the port to 8080
+# port = 8080
 
 # clean the log file
 clean_log_file()
 
-# Run the Flask development server on port 8080
-app.run(host='0.0.0.0', port=port, debug=True)
+# # Run the Flask development server on port 8080
+# app.run(host='0.0.0.0', port=port, debug=True)
 
-# if __name__ == '__main__':
-#     app.run(host='0.0.0.0', port=8080)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8080)
