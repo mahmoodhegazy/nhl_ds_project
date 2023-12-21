@@ -27,12 +27,18 @@ class ServingClient:
             X (Dataframe): Input dataframe to submit to the prediction service.
         """
         url = f"{self.base_url}/predict"
-        response = requests.post(url, json=X.to_json(orient='split'))
-        if response.status_code == 200:
-            return pd.read_json(response.json(), orient='split')
-        else:
-            logger.error(f"Failed to get predictions: {response.text}")
-            return pd.DataFrame()
+        for index, row in X.iterrows():
+            data = {
+                'model': 'xgboost',
+                'shot_distance_to_goal': row['shot_distance_to_goal'],
+                'shot_angle': row['shot_angle']
+            }
+            response = requests.post(url, json=data)
+            if response.status_code == 200:
+                return pd.read_json(response.json(), orient='split')
+            else:
+                logger.error(f"Failed to get predictions: {response.text}")
+                return pd.DataFrame()
 
     def logs(self) -> dict:
         """Get server logs"""
@@ -59,7 +65,7 @@ class ServingClient:
             model (str): The model in the Comet ML registry to download
             version (str): The model version to download
         """
-        url = f"{self.base_url}/download_model"
+        url = f"{self.base_url}/download_registry_model"
         payload = {"workspace": workspace, "model": model, "version": version}
         response = requests.post(url, json=payload)
         if response.status_code == 200:
@@ -67,3 +73,9 @@ class ServingClient:
         else:
             logger.error(f"Failed to download model: {response.text}")
             return {}
+
+
+# client = ServingClient(ip="127.0.0.1", port=8080)
+# test_data = pd.DataFrame({'shot_distance_to_goal': [20], 'shot_angle': [45]})
+# prediction = client.logs()
+# print(prediction)
