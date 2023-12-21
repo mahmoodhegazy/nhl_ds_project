@@ -26,19 +26,17 @@ class ServingClient:
         Args:
             X (Dataframe): Input dataframe to submit to the prediction service.
         """
-        url = f"{self.base_url}/predict"
-        for index, row in X.iterrows():
-            data = {
-                'model': 'xgboost',
-                'shot_distance_to_goal': row['shot_distance_to_goal'],
-                'shot_angle': row['shot_angle']
-            }
-            response = requests.post(url, json=data)
-            if response.status_code == 200:
-                return pd.read_json(response.json(), orient='split')
-            else:
-                logger.error(f"Failed to get predictions: {response.text}")
-                return pd.DataFrame()
+        # Get list of predicctions for events
+        response = requests.post(
+        	f"{self.base_url}/predict", 
+        	json = json.loads(X.to_json())
+        )
+        if response.status_code == 200:
+            return pd.DataFrame(response.json(), columns=['xG'])
+        else:
+            logger.error(f"Failed to get predictions: {response.text}")
+            return pd.DataFrame()
+        
 
     def logs(self) -> dict:
         """Get server logs"""
