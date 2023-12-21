@@ -13,7 +13,7 @@ if 'last_game_id' not in st.session_state:
 if 'last_selected_model' not in st.session_state:
     st.session_state.last_selected_model = None
 
-serving_client = serving_client.ServingClient(ip='127.0.0.1', port=8080)
+serving_client = serving_client.ServingClient(ip='serving', port=8080)
 game_client = game_client.GameClient()
 
 #=== Title
