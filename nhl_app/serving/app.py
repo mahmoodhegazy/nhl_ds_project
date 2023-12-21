@@ -50,7 +50,6 @@ api = API(os.environ.get('COMET_API_KEY'))
 model_data = None
 model = None
 
-
 def create_all():
     """
     Hook to handle any initialization before the first request (e.g. load model,
@@ -62,18 +61,21 @@ def create_all():
     # any other initialization before the first request (e.g. load default model)
     global model_data
     global model
+    global model_name
+    model_name = "log"
     model_data = {
         "log" : {
             "file_name":"both.sav",
             "registry_name" : "distance-and-angle-model-1",
             "cols" : [['shot_distance', 'shot_angle']]
         },
-        "xgboost" : {
-            "file_name":"XGBOOST-baseline.sav",
-            "registry_name" : "xgboost-baseline",
-            "cols": ['shot_distance_to_goal', 'shot_angle']
+        "logdist" : {
+            "file_name":"distance.sav",
+            "registry_name" : "distance-model-1",
+            "cols": ['shot_distance_to_goal']
         }
     }
+    
     app.logger.info("Before first request...")
     if os.path.exists(f'model/both.sav'):
             model = pickle.load(open(f'model/both.sav', 'rb'))
@@ -98,11 +100,14 @@ def predict():
     """
 
     body = request.get_json()
-    data_shot_dist = body['shot_distance_to_goal']
-    data_shot_angle = body['shot_angle']
-
-    data = [[data_shot_dist[key], data_shot_angle[key]] for key in data_shot_dist.keys()]
     
+    if model_name == "log":
+        data_shot_dist = body['shot_distance_to_goal']
+        data_shot_angle = body['shot_angle']
+        data = [[data_shot_dist[key], data_shot_angle[key]] for key in data_shot_dist.keys()]
+    elif model_name == "logdist":
+        data_shot_dist = body['shot_distance_to_goal']
+        data = [[data_shot_dist[key]] for key in data_shot_dist.keys()]
     df = pd.DataFrame(data)
     app.logger.info(body)
     response = model.predict_proba(df)
