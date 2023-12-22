@@ -72,7 +72,8 @@ class GameClient:
         # Init predicitons 
         df_with_predictions = pd.DataFrame()
 
-        if new_events:
+        # Check that we have new events with at least one shot/goal (goals and shots codes according to https://gitlab.com/dword4/nhlapi/-/issues/110)
+        if new_events and any(d['typeCode'] in [505, 506, 507, 508] for d in new_events):
             # Create a temporary df with only new events
             temp_game_data = game_data.copy()
             temp_game_data['plays'] = new_events
