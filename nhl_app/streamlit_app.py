@@ -5,11 +5,15 @@ from ift6758.ift6758.client import serving_client, game_client
 import pandas as pd
 import numpy as np
 
-# Initialize session state for temp if not already done
+# Initialize session state if not already done
 if 'last_game_id' not in st.session_state:
     st.session_state.last_game_id = None
 if 'last_selected_model' not in st.session_state:
     st.session_state.last_selected_model = None
+if 'selected_model' not in st.session_state:
+    st.session_state.selected_model = None
+
+# Initialize the game client
 if 'game_client' not in st.session_state:
     st.session_state.game_client = game_client.GameClient()
 if 'serving_client' not in st.session_state:
@@ -22,17 +26,19 @@ st.subheader('Current Live Games')
 
 with st.sidebar:
     workspace = st.selectbox("Workspace", ["mahmoodhegazy"])
-    model = st.selectbox("Model", ["log", "logdist"])
+    selected_model = st.selectbox("Model", ["log", "logdist"])
     version = st.selectbox("Version", ["1.0.0"])
+    # Monitor changes in the selected model
+    if selected_model != st.session_state.last_selected_model:
+        st.session_state.last_selected_model = selected_model
+        st.session_state.game_client = game_client.GameClient()
+        st.session_state.last_game_id = None
+
     if st.button('Get Model'):
         # Download model from CometML
-        st.session_state.serving_client.download_registry_model(workspace, model, version)
+        st.session_state.serving_client.download_registry_model(workspace, selected_model, version)
         st.success('Model Downloaded')
-        # Monitor changes in the selected model
-        if model != st.session_state.last_selected_model:
-            st.session_state.temp = 0
-            st.session_state.last_game_id = None
-            st.session_state.last_selected_model = model
+
 
 
 with st.container():
