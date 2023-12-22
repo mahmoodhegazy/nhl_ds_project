@@ -6,15 +6,15 @@ import pandas as pd
 import numpy as np
 
 # Initialize session state for temp if not already done
-if 'temp' not in st.session_state:
-    st.session_state.temp = 0
 if 'last_game_id' not in st.session_state:
     st.session_state.last_game_id = None
 if 'last_selected_model' not in st.session_state:
     st.session_state.last_selected_model = None
+if 'game_client' not in st.session_state:
+    st.session_state.game_client = game_client.GameClient()
+if 'serving_client' not in st.session_state:
+    st.session_state.serving_client = serving_client.ServingClient(ip='serving', port=8080)
 
-serving_client = serving_client.ServingClient(ip='serving', port=8080)
-game_client = game_client.GameClient()
 
 #=== Title
 st.title("NHL Game Analysis Dashboard")
@@ -26,7 +26,7 @@ with st.sidebar:
     version = st.selectbox("Version", ["1.0.0"])
     if st.button('Get Model'):
         # Download model from CometML
-        serving_client.download_registry_model(workspace, model, version)
+        st.session_state.serving_client.download_registry_model(workspace, model, version)
         st.success('Model Downloaded')
         # Monitor changes in the selected model
         if model != st.session_state.last_selected_model:
@@ -34,14 +34,25 @@ with st.sidebar:
             st.session_state.last_game_id = None
             st.session_state.last_selected_model = model
 
+
 with st.container():
+
     game_id = st.text_input("Enter Game ID (e.g., 2021020329):")
     ping_button = st.button('Ping game')
 
+    if 'last_game_id' not in st.session_state:
+        st.session_state.last_game_id = None
+
     if ping_button:
       if game_id.strip():
+        if game_id == st.session_state.last_game_id:
+              st.session_state.game_data = st.session_state.game_client.ping_game(game_id)
+        else:
+              # Fetch new data
+              st.session_state.game_data = st.session_state.game_client.ping_game(game_id)
+
         st.success(f"Latest data fetched for Game ID: {game_id}")
-        st.session_state.game_data = game_client.ping_game(game_id)
+        # st.session_state.game_data = game_client.ping_game(game_id)
         # Display game information
         st.subheader(
             f"Game {game_id}: {st.session_state.game_data['home_name']} vs {st.session_state.game_data['away_name']}")
@@ -65,22 +76,18 @@ with st.container():
                       f"{away_xG_formatted} ({st.session_state.game_data['away_score']})",
                       delta=away_delta_formatted)
 
-        # Check if the same game ID is being pinged again
-        if game_id == st.session_state.last_game_id and st.session_state.temp >= 1:
-            st.session_state.game_data = game_client.ping_game(game_id)
-
         st.subheader("Data used for predictions (and predictions)")
+        # Update the last pinged game ID and temp
+        st.session_state.last_game_id = game_id
+
         if st.session_state.game_data.get('df') is not None and not st.session_state.game_data['df'].empty:
             st.dataframe(st.session_state.game_data['df'])
         else:
             st.write("No new data available for this game.")
 
-        # Update the last pinged game ID and temp
-        st.session_state.last_game_id = game_id
-        st.session_state.temp += 1
-
       else:
         st.warning("Please enter a Game ID before pinging.")
+
 
 
 # Display the dataframe from session state
