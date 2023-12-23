@@ -79,14 +79,16 @@ class GameClient:
             temp_game_data['plays'] = new_events
             df = self.extract_features(temp_game_data)
             # Seperate home events from away events
-            df_home = df[df.event_team == "home"][["shot_distance_to_goal", "shot_angle"]]
-            df_away = df[df.event_team == "away"][["shot_distance_to_goal", "shot_angle"]]
+            df_home = df[df.event_team == "home"][["event_type", "shot_distance_to_goal", "shot_angle"]]
+            df_away = df[df.event_team == "away"][["event_type", "shot_distance_to_goal", "shot_angle"]]
             # Get preds for home and away
-            preds_home = serving_client.predict(df_home)
-            preds_away = serving_client.predict(df_away)
+            preds_home = serving_client.predict(df_home[["shot_distance_to_goal", "shot_angle"]])
+            preds_away = serving_client.predict(df_away[["shot_distance_to_goal", "shot_angle"]])
             df_home["team"] = "home"
+            df_home["team_name"] = home_name
             df_home["xG"] = preds_home["xG"].tolist()
             df_away["team"] = "away"
+            df_away["team_name"] = away_name
             df_away["xG"] = preds_away["xG"].tolist()
             # Concat to return data to show 
             df_with_predictions = pd.concat([df_home, df_away])
@@ -132,19 +134,3 @@ class GameClient:
         feat_eng.tranform()
         df = feat_eng.df
         return df
-
-    def update_processed_events(self, game_id, events):
-        """
-                Updates the internal tracker with processed event IDs for a specific game_id.
-                This ensures that these events are not reprocessed in subsequent calls.
-
-                Args:
-                    game_id (str): The game ID for which events are to be updated.
-                    events (list): A list of event dictionaries that have been processed.
-        """
-        if game_id not in self.processed_events:
-            self.processed_events[game_id] = set()
-        for event in events:
-            event_id = event.get('eventId')  # Update to use the correct key for event ID
-            if event_id:
-                self.processed_events[game_id].add(event_id)
