@@ -1,4 +1,4 @@
-# IFT6758 Repo Template
+# IFT6758 NHL App
 
 This template provides you with a skeleton of a Python package that can be installed into your local machine.
 This allows you access your code from anywhere on your system if you've activated the environment the package was installed to.
