@@ -141,7 +141,10 @@ with st.container():
         st.session_state.last_game_id = game_id
 
         if st.session_state.game_data.get('df') is not None and not st.session_state.game_data['df'].empty:
-            st.dataframe(st.session_state.game_data['df'][["team_name", "shot_distance_to_goal", "shot_angle", "xG"]])
+            if st.session_state.last_selected_model == "logdist": #Only show features showed from predicitons for chosen model
+                st.dataframe(st.session_state.game_data['df'][["team_name", "shot_distance_to_goal", "xG"]])
+            else:
+                st.dataframe(st.session_state.game_data['df'][["team_name", "shot_distance_to_goal", "shot_angle", "xG"]])
             # Bonus Part 7: Plot stats of these pinged events
             st.subheader('Teams New (pinged) Shots Statistics')
             st.write("Here we see shot stats per team for the pinged events (intended as the bonus component). Ideally this would be overall and not just new pinged events but that requires some work in game client to keep track of shot history")
